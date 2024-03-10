@@ -1,0 +1,57 @@
+version: "3"
+
+volumes:
+  food-log-postgres-data:
+
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: food-log-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    # ports:
+    #   - "9090:9090"
+    network_mode: "host"
+
+  grafana:
+    image: grafana/grafana
+    container_name: food-log-grafana
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/ds.yaml
+    # ports:
+    #   - "3000:3000"
+    network_mode: "host"
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: food-log-promtail
+    volumes:
+      - ./promtail.yaml:/etc/promtail/config.yaml:ro
+      - ./../logs:/logs
+    command: -config.file=/etc/promtail/config.yaml
+    network_mode: "host"
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: food-log-loki
+    command: "-config.file=/etc/loki/config.yaml -target=all"
+    # ports:
+    #   - 3100:3100
+    # - 7946
+    # - 9095
+    volumes:
+      - ./loki.yaml:/etc/loki/config.yaml
+    network_mode: "host"
+
+  postgres:
+    image: postgres:16
+    container_name: food-log-postgres
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - food-log-postgres-data:/var/lib/postgresql/data
+    network_mode: host
